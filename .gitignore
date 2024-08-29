@@ -2,8 +2,6 @@
 # This .gitignore file was automatically created by Microsoft(R) Visual Studio.
 ################################################################################
 
-/.vs
-/ProgramacaoParalela/.vs
-/ProgramacaoParalela/Lab01/obj
-/ProgramacaoParalela/Lab01/bin
-/ProgramacaoParalela/Lab02/obj
+.vs
+obj
+bin
