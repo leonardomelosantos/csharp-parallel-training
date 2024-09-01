@@ -13,9 +13,7 @@ cálculo da variância depende do valor da média. Considere como essas dependê
 podem ser exploradas para otimizar a construção e a execução das tarefas.
 */
 
-using System;
-using System.Collections.Concurrent;
-using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace Lab02.Ex2;
 
@@ -23,7 +21,19 @@ class Program
 {
     static void Main(string[] args)
     {
+        double[] sequence = LerObterEntrada();
+
+        Console.WriteLine("=== Iniciando execução");
+        ExecutarSync(sequence);
+
+        Console.WriteLine("=== Iniciando execução async");
+        ExecutarAsync(sequence);
+    }
+
+    private static double[] LerObterEntrada()
+    {
         // Ler N da entrada
+        Console.Write("Digite a entrada - Qtd números aleatórios:");
         int N = int.Parse(Console.ReadLine());
 
         double[] sequence = new double[N];
@@ -34,23 +44,89 @@ class Program
         {
             sequence[i] = rand.NextDouble() * 100;
         }
+        return sequence;
+    }
 
-        // Continue a Implementação
-        Task<double> resultMediana = CalcularMedianaAsync(sequence);
-        Task<double> resultMedia = CalcularMediaAsync(sequence);
-        Task<double> resultVariancia = CalcularVariancia(sequence);
-        Task<double> resultDesvioPadrao = CalcularDesvioPadrao(sequence);
+    #region Sync methods
+    private static void ExecutarSync(double[] sequence)
+    {
+        Stopwatch timer = new Stopwatch();
+        timer.Start();
 
-        Task.WaitAll(resultMediana, resultMedia, resultVariancia, resultDesvioPadrao);
+        double resultMediana = CalcularMediana(sequence);
+        double resultMedia = CalcularMedia(sequence);
+        double resultVariancia = CalcularVariancia(sequence, resultMedia);
+        double resultDesvioPadrao = CalcularDesvioPadrao(resultVariancia, timer);
+    }
 
-        Console.WriteLine("Fim do programa");
+    private static double CalcularMedia(double[] sequence)
+    {
+        return sequence.Sum(x => x) / sequence.Length;
+    }
+
+    private static double CalcularMediana(double[] sequence)
+    {
+        Array.Sort(sequence);
+
+        int numbersAmount = sequence.Length;
+        int middleIndex = numbersAmount / 2;
+
+        double mediana = (numbersAmount % 2 == 1)
+            ? sequence[middleIndex]
+            : ((sequence[middleIndex - 1] + sequence[middleIndex]) / 2);
+
+        Console.WriteLine("Mediana: " + mediana);
+        return mediana;
+    }
+
+    private static double CalcularVariancia(double[] sequence, double avarage)
+    {
+        int length = sequence.Length;
+
+        double squaredSum = 0;
+        foreach (double number in sequence)
+        {
+            double deviation = number - avarage;
+            squaredSum += Math.Pow(deviation, 2);
+        }
+
+        double varianceValue = squaredSum / length; // Calculate the varianceValue
+        Console.WriteLine("Variância: " + varianceValue);
+        return varianceValue;
+    }
+
+    private static double CalcularDesvioPadrao(double variancia, Stopwatch timer)
+    {
+        double desvioPadrao = Math.Sqrt(variancia);
+        Console.WriteLine("Desvio padrão: " + desvioPadrao);
+
+        timer.Stop();
+        Console.WriteLine("Tempo de execução: " + timer.ElapsedMilliseconds + " ms");
+
+        return desvioPadrao;
+    }
+
+    #endregion
+
+    #region Async methods
+
+    private static void ExecutarAsync(double[] sequence)
+    {
+        Stopwatch timer = new Stopwatch();
+        timer.Start();
+
+        Task<double> resultMedianaAsync = CalcularMedianaAsync(sequence);
+        Task<double> resultMediaAsync = CalcularMediaAsync(sequence);
+        Task<double> resultVarianciaAsync = CalcularVarianciaAsync(sequence, resultMediaAsync.Result);
+        Task<double> resultDesvioPadraoAsync = CalcularDesvioPadraoAsync(resultVarianciaAsync.Result, timer);
+        resultDesvioPadraoAsync.Wait();
     }
 
     private static async Task<double> CalcularMediaAsync(double[] sequence)
     {
         return await Task.Run(() =>
         {
-            return sequence.Sum(x => x) / sequence.Length;
+            return CalcularMedia(sequence);
         });
     }
 
@@ -58,19 +134,7 @@ class Program
     {
         return await Task.Run(() =>
         {
-            Array.Sort(sequence);
-
-            int numbersAmount = sequence.Length;
-            int middleIndex = numbersAmount / 2;
-
-            if (numbersAmount % 2 == 1)
-            {
-                return sequence[middleIndex];
-            }
-            else
-            {
-                return (sequence[middleIndex - 1] + sequence[middleIndex]) / 2;
-            }
+            return CalcularMediana(sequence);
         });
     }
 
@@ -78,36 +142,17 @@ class Program
     {
         return await Task.Run(() =>
         {
-            int length = sequence.Length;
-
-            // Calculate the avarage
-            /*double sum = 0;
-            foreach (double number in sequence)
-            {
-                sum += number;
-            }
-            double avarage = sum / length;*/
-
-            // Calculate the squared deviations
-
-            double squaredSum = 0;
-            foreach (double number in sequence)
-            {
-                double deviation = number - avarage;
-                squaredSum += Math.Pow(deviation, 2);
-            }
-            
-            double varianceValue = squaredSum / length; // Calculate the varianceValue
-
-            return varianceValue;
+            return CalcularVariancia(sequence, avarage);
         });
     }
 
-    private static async Task<double> CalcularDesvioPadraoAsync(double variancia)
+    private static async Task<double> CalcularDesvioPadraoAsync(double variancia, Stopwatch timer)
     {
         return await Task.Run(() =>
         {
-            return Math.Sqrt(variancia);
+            return CalcularDesvioPadrao(variancia, timer);
         });
     }
+
+    #endregion
 }
