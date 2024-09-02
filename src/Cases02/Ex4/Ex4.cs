@@ -12,11 +12,8 @@ C. Faça uma terceira versão que utiliza Parallel.ForEach.
 D. Compare o tempo de execução das três implementações.
 */
 
-using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Threading.Tasks;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Lab02.Ex4;
 
@@ -138,7 +135,7 @@ class PrimosParallelForEach : PrimosBase
     protected override List<int> GetPrimesFrom(int k)
     {
         ConcurrentBag<int> primes = new ConcurrentBag<int>();
-        Parallel.ForEach<int>(Enumerable.Range(1, k), (number) => 
+        Parallel.ForEach<int>(Enumerable.Range(1, k), (number) =>
         {
             if (IsPrime(number))
             {
