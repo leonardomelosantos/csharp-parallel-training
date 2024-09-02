@@ -27,7 +27,7 @@ seria uma fila sequencial sem vantagem alguma.
 
 Já as versões B e C tem bom desempenho. Observo que o uso do Parallel.ForEach teve uma
 certa vantagem porque não foi necessário criar Tasks e esperar todas elas. A opção B
-foi ter apenas uma contenção com um lock na hora de gravar arquivo.
+tem apenas uma contenção com um lock na hora de gravar arquivo.
  
  */
 
