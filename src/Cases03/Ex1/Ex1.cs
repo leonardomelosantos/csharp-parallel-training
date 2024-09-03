@@ -26,6 +26,7 @@ A chapa B venceu a eleição!
 */
 
 using System;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -33,6 +34,10 @@ namespace Lab03.Ex1;
 
 class Program
 {
+    static int _totalChapaA = 0;
+    static int _totalChapaB = 0;
+    static object _lockGlobalUpdater = new object();
+
     static void Main(string[] args)
     {
         // Leitura do número de regiões
@@ -50,6 +55,27 @@ class Program
         }
 
         // Continue a implementação
+        Parallel.ForEach<(int votosChapaA, int votosChapaB)>(votos, AtualizadorContagem);
 
+        Console.WriteLine($"Chapa A: {_totalChapaA} votos");
+        Console.WriteLine($"Chapa B: {_totalChapaB} votos");
+        Console.WriteLine(GetChapaVencedora());
+    }
+
+    private static string GetChapaVencedora()
+    {
+        if (_totalChapaA == _totalChapaB)
+            return "Eleição empatada";
+
+        string chapaVencedora = _totalChapaA > _totalChapaB ? "A" : "B";
+        return $"A chapa {chapaVencedora} venceu a eleição!";
+    }
+
+    private static void AtualizadorContagem((int votosChapaA, int votosChapaB) votes, ParallelLoopState state, long arg3)
+    {
+        Task.Delay(new Random().Next(1000));
+
+        Interlocked.Add(ref _totalChapaA, votes.votosChapaA);
+        Interlocked.Add(ref _totalChapaB, votes.votosChapaB);
     }
 }
