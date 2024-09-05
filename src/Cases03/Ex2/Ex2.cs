@@ -7,12 +7,14 @@ seu valor periodicamente em intervalos aleatórios, permitindo que múltiplos us
 ReaderWriterLockSlim para garantir leituras concorrentes seguras, enquanto a atualização
 do sensor é feita de forma exclusiva. Cada usuário fará suas leituras em intervalos de
 tempo aleatórios, e o sensor atualizará sua temperatura de forma independente, também
-em intervalos aleatórios. O programa deve receber como entrada: O número de usuários U,
+em intervalos aleatórios. 
+
+O programa deve receber como entrada: O número de usuários U,
 o número de atualizações do sensor S. Em seguida, U linhas onde cada linha especifica a
 quantidade de leituras que um usuário realizará.
 
 Entrada:
-3 5
+3 2
 2
 4
 1
@@ -37,9 +39,11 @@ namespace Lab03.Ex2;
 
 class Program
 {
+    static ReaderWriterLockSlim _readerWriterLockSlim = new ReaderWriterLockSlim();
+    static decimal _temperaturaSensor = 0;
+
     static void Main(string[] args)
     {
-
         // Obter a quantidade de usuários e atualizações do sensor
         string[] entrada = Console.ReadLine().Split();
         int usuarios = int.Parse(entrada[0]);
@@ -52,5 +56,43 @@ class Program
         }
 
         // Continue a implementação
+        Task[] tasksUsuarios = new Task[usuarios];
+        Task[] tasksAtualizacoes = new Task[atualizacoes];
+
+        for (int i = 0; i < usuarios; i++)
+        {
+            Task task = Task.Factory.StartNew(() => { ExecutaLeiturasUsuario(i, leituras[i]); });
+            tasksUsuarios[i] = task;
+        }
+
+        for (int i = 0; i < atualizacoes; i++)
+        {
+            Task task = Task.Factory.StartNew(() => { ExecutaAtualizacaoSensor(); });
+            tasksAtualizacoes[i] = task;
+        }
+
+        Task.WaitAll(tasksUsuarios);
+        Task.WaitAll(tasksAtualizacoes);
+    }
+
+    static void ExecutaLeiturasUsuario(int usuarioIndex, int qtdLeituras)
+    {
+        for(int i = 0;i < qtdLeituras; i++)
+        {
+            Task.Delay((new Random(1500)).Next()); // Delay aleatório
+            _readerWriterLockSlim.EnterReadLock();
+            decimal valorLeitura = _temperaturaSensor;
+            _readerWriterLockSlim.ExitReadLock();
+            Console.WriteLine($"Usuário {usuarioIndex+1}: Temperatura lida: {valorLeitura}°C");
+        }
+    }
+
+    static void ExecutaAtualizacaoSensor()
+    {
+        Task.Delay(new Random(1500).Next()); // Delay aleatório
+        _readerWriterLockSlim.EnterWriteLock();
+        _temperaturaSensor = Math.Round((decimal)((new Random(10000).Next()) / 100), 2);
+        Console.WriteLine($"[Sensor] Temperatura atualizada: {_temperaturaSensor}°C");
+        _readerWriterLockSlim.ExitWriteLock();
     }
 }
