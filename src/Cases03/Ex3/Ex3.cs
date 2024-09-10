@@ -22,7 +22,6 @@ Dicas:
 
 Exemplo:
 Entrada:
-
 4 2
 Moqueca de Peixe, 50
 Bife à Cavalo, 40
@@ -49,15 +48,19 @@ namespace Lab03.Ex3;
 
 class Program
 {
+    
+
     static void Main(string[] args)
     {
 
+        
+
         // Obter o número de pedidos (P) e de cozinheiros (C)
         string[] entrada = Console.ReadLine().Split();
-        int P = int.Parse(entrada[0]);
-        int C = int.Parse(entrada[1]);
+        int P = int.Parse(entrada[0]); // Pedidos
+        int C = int.Parse(entrada[1]); // Cozinheiros
 
-        var pedidos = new List<(string prato, int tempo)>();
+        List<(string prato, int tempo)> pedidos = new List<(string prato, int tempo)>();
 
         for (int i = 0; i < P; i++)
         {
@@ -67,6 +70,44 @@ class Program
             pedidos.Add((prato, tempo));
         }
 
+        Cozinha cozinha = new Cozinha(C, pedidos);
+
         // Continue a implementação
+    }
+}
+
+class Cozinha
+{
+    private static SemaphoreSlim semaphoreSlim;
+    private readonly int pedidos;
+    private readonly int cozinheiros;
+    private readonly List<(string prato, int tempo)> pedidosFila;
+    private Task[] pedidosTasks;
+
+    public Cozinha(int cozinheiros, List<(string prato, int tempo)> pedidosFila)
+    {
+        this.pedidos = pedidosFila.Count;
+        this.cozinheiros = cozinheiros;
+        this.pedidosFila = pedidosFila;
+
+        semaphoreSlim = new SemaphoreSlim(0, cozinheiros);
+        pedidosTasks = new Task[cozinheiros];
+    }
+
+    public void Iniciar()
+    {
+        for (int i = 0; i < pedidos; i++)
+        {
+            pedidosTasks[i] = Task.Run(() => { PrepararProximosPrato(); });
+            pedidosTasks[i].Start();
+        }
+
+        Task.WhenAll(pedidosTasks);
+    }
+
+    private void PrepararProximosPrato()
+    {
+        
+        
     }
 }
