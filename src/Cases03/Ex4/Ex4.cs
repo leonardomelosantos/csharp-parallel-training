@@ -15,7 +15,7 @@ programa deve:
 3. Distribuir a tarefa de entrega entre E Entregadores.
 4. Cada Vendedor cria solicitações de entrega em intervalos aleatórios (Task.Delay) e
 os coloca na fila.
-5. Cada Entregador remove pedidos da fila e imprime uma mensagem de entrega.
+5. Cada Entregador remove _pedidos da fila e imprime uma mensagem de entrega.
 
 Exemplo:
 Entrada: 2 2 2
@@ -37,7 +37,7 @@ class Program
 {
     static void Main(string[] args)
     {
-        // Leitura do número total de pedidos (N), vendedores (V) e entregadores (E)
+        // Leitura do número total de _pedidos (N), vendedores (V) e entregadores (E)
         string[] entrada = Console.ReadLine().Split();
         int N = int.Parse(entrada[0]);
         int V = int.Parse(entrada[1]);
