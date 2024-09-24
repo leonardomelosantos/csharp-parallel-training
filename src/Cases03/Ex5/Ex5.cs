@@ -21,7 +21,7 @@ número de vagas disponíveis.
 que os veículos podem tentar entrar no estacionamento.
 
 Seu programa deve receber como entrada a capacidade do estacionamento C e o número
-de veículos que utilizaram o estacionamento V. Imprima mensagens no console, conforme
+de veículos que utilizaram o estacionamento qtdVeiculos. Imprima mensagens no console, conforme
 os eventos (entrada e saída de veículos) ocorrerem no sistema.
 
 Exemplo:
@@ -55,11 +55,108 @@ class Program
 {
     static void Main()
     {
-        // Obter a capacidade do estacionamento (C) e o número de veículos (V)
+        // Obter a capacidade do estacionamento (C) e o número de veículos (qtdVeiculos)
         string[] entrada = Console.ReadLine().Split();
         int C = int.Parse(entrada[0]);
         int V = int.Parse(entrada[1]);
 
         // Continue a implementação
+        Parking p = new Parking(C);
+        _ = p.IniciarMonitoramento();
+        p.IniciarTasksSimulacao(V);
+    }
+}
+
+public class Parking
+{
+    private const int DELAY_SIMULACAO_MINIMO_MILISEGUNDOS = 350;
+    private const int DELAY_SIMULACAO_MAXIMO_MILISEGUNDOS = 1200;
+
+    private EventWaitHandle _waitEvent;
+    private SemaphoreSlim _lotacaoSemaphoreSlim;
+    private SemaphoreSlim _umPorVezSemaphoreSlim = new(1);
+    private volatile bool _monitoramentoAtivadoVolatile;
+    private int _vagasDisponiveisAtomic;
+    private string _sinalizacaoAcaoAtomic = string.Empty;
+    private List<Task> veiculosTasks = new List<Task>();
+
+    public Parking(int vagasDisponiveis)
+    {
+        _vagasDisponiveisAtomic = vagasDisponiveis;
+        _waitEvent = new AutoResetEvent(false);
+        _lotacaoSemaphoreSlim = new SemaphoreSlim(vagasDisponiveis);
+    }
+
+    internal Task IniciarMonitoramento()
+    {
+        _monitoramentoAtivadoVolatile = true;
+
+        return Task.Run(() =>
+        {
+            while (_monitoramentoAtivadoVolatile)
+            {
+                _waitEvent.WaitOne(); // Wait for some signal
+                Console.WriteLine($"Evento: Veículo {_sinalizacaoAcaoAtomic}. Vagas disponíveis: {_vagasDisponiveisAtomic}");
+            }
+        });
+    }
+
+    internal async Task TryStartVeiculoAsync(int identificacaoVeiculo)
+    {
+        await SimularEntrada(identificacaoVeiculo); // Local function, apenas para organizar melhor, sem ter excesso de metodos na classe
+
+        await SimularDelayPermanencia(identificacaoVeiculo);
+        
+        SimularSaida(identificacaoVeiculo); // Local function, apenas para organizar melhor, sem ter excesso de metodos na classe
+
+        async Task SimularEntrada(int identificacaoVeiculo)
+        {
+            Console.WriteLine($"Veículo {identificacaoVeiculo} esperando para entrar...");
+            await _umPorVezSemaphoreSlim.WaitAsync();
+            await _lotacaoSemaphoreSlim.WaitAsync();
+            _umPorVezSemaphoreSlim.Release();
+
+            Console.WriteLine($"Veículo {identificacaoVeiculo} estacionou.");
+
+            Interlocked.Decrement(ref _vagasDisponiveisAtomic);
+            Interlocked.Exchange(ref _sinalizacaoAcaoAtomic, "entrou");
+
+            _waitEvent.Set(); // Send signal
+        }
+
+        void SimularSaida(int identificacaoVeiculo)
+        {
+            _lotacaoSemaphoreSlim.Release();
+            Console.WriteLine($"Veículo {identificacaoVeiculo} saiu.");
+
+            Interlocked.Increment(ref _vagasDisponiveisAtomic);
+            Interlocked.Exchange(ref _sinalizacaoAcaoAtomic, "saiu");
+            _waitEvent.Set(); // Send signal
+        }
+    }
+
+    private static async Task SimularDelayPermanencia(int identificacaoVeiculo)
+    {
+        await Task.Delay(new Random().Next(DELAY_SIMULACAO_MINIMO_MILISEGUNDOS, DELAY_SIMULACAO_MAXIMO_MILISEGUNDOS));
+    }
+
+    internal void IniciarTasksSimulacao(int qtdVeiculos)
+    {
+        for (int indexVeiculo = 1; indexVeiculo <= qtdVeiculos; indexVeiculo++)
+        {
+            // Esse timer para simular uma fila de chegada, causou efeito colateral.
+            //await Task.Delay(indexVeiculo * 10);
+
+            int identificacaoVeiculo = indexVeiculo;
+            Task veiculoTask = Task.Run(async () =>
+            {
+                await TryStartVeiculoAsync(identificacaoVeiculo);
+            });
+            veiculosTasks.Add(veiculoTask);
+        }
+
+        Task.WhenAll(veiculosTasks)
+            .ContinueWith((obj) => { _monitoramentoAtivadoVolatile = false; })
+            .Wait();
     }
 }
